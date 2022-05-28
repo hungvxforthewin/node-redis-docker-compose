@@ -1,0 +1,16 @@
+version: '3'
+services:
+  redis:
+    container_name: redis
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  node-app:
+    container_name: 'node_redis_app'
+    restart: always
+    build: .
+    ports:
+      - "8000:8081"
+    links:
+      - redis
