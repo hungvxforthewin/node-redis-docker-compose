@@ -14,8 +14,6 @@ services:
         build: .
         ports:
             - "8000:8081"
-        links:
-            - redis
         networks:
             - common
 networks:

@@ -3,11 +3,14 @@ const redis = require("redis");
 const session = require("express-session");
 let RedisStore = require("connect-redis")(session);
 const app = express();
+// const client = redis.createClient(6379, "redis");
+// const client = redis.createClient({
+//     host: "redis-server",
+//     port: 6379,
+// });
 const client = redis.createClient({
     url: "redis://redis:6379",
     //legacyMode: true,
-    // host: "redis",
-    // port: "redis:6379",
 });
 
 client.on("error", (err) => console.log("Redis Client Error", err));
@@ -22,7 +25,7 @@ const visits = 0;
         console.log(error);
     }
 })();
-
+client.on("connect", () => console.log("Connected to Redis"));
 app.use(
     session({
         store: new RedisStore({ client: client, ttl: 260 }),
@@ -51,7 +54,7 @@ app.get("/visits", async (req, res) => {
 });
 
 //defining the root endpoint
-app.get("/xxx", (req, res) => {
+app.get("/redis", (req, res) => {
     console.log("redis");
     let oldCount = RedisStore["visits"] || 0;
     //let oldCount req.session.count || 0;
