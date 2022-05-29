@@ -5,24 +5,31 @@ let RedisStore = require("connect-redis")(session);
 const app = express();
 const client = redis.createClient({
     url: "redis://redis:6379",
+    //legacyMode: true,
+    // host: "redis",
+    // port: "redis:6379",
 });
 
 client.on("error", (err) => console.log("Redis Client Error", err));
 const visits = 0;
 
 (async () => {
-    await client.connect();
-    const re = await client.ping();
-    console.log("ping", re);
+    try {
+        await client.connect();
+        const re = await client.ping();
+        console.log("ping", re);
+    } catch (error) {
+        console.log(error);
+    }
 })();
 
 app.use(
     session({
-        //store: new RedisStore({ client: client }),
+        store: new RedisStore({ client: client, ttl: 260 }),
         secret: "config.SECRET",
         resave: false,
         //proxy: true,
-        saveUninitialized: true,
+        saveUninitialized: false,
         cookie: { maxAge: 24 * 60 * 60 * 1000, httpOnly: false, secure: false }, // mini second hour * 60 * 60 * 1000
     })
 );
@@ -46,9 +53,10 @@ app.get("/visits", async (req, res) => {
 //defining the root endpoint
 app.get("/xxx", (req, res) => {
     console.log("redis");
-    let oldCount = req.session.count || 0;
+    let oldCount = RedisStore["visits"] || 0;
+    //let oldCount req.session.count || 0;
     client.get("visits", (err, visits) => {
-        req.session.count = parseInt(oldCount) + 1;
+        RedisStore["visits"] = parseInt(oldCount) + 1;
         res.send("Number of visits is: " + oldCount);
         client.set("visits", parseInt(oldCount) + 1);
         //console.log(req.session.count);
@@ -57,9 +65,9 @@ app.get("/xxx", (req, res) => {
 
 //defining the root endpoint
 app.get("/withoutredis", (req, res) => {
-    redisClient.get("visits", (err, visits) => {
+    client.get("visits", (err, visits) => {
         res.send("Number of visits is: " + visits);
-        redisClient.set("visits", parseInt(visits) + 1);
+        client.set("visits", parseInt(visits) + 1);
     });
 });
 
