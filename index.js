@@ -28,7 +28,7 @@ const visits = 0;
 client.on("connect", () => console.log("Connected to Redis"));
 app.use(
     session({
-        store: new RedisStore({ client: client, ttl: 260 }),
+        store: new RedisStore({ client: client }),
         secret: "config.SECRET",
         resave: false,
         //proxy: true,
@@ -38,40 +38,36 @@ app.use(
 );
 
 //Set initial visits
-client.set("visits", 0);
+//client.set("visits", 0);
 
 app.get("/", (req, res) => {
     res.send("working");
 });
 
 //defining the root endpoint
+app.get("/redis", async (req, res) => {
+    console.log("redis");
+    console.log("sess", req.session.count);
+    //let oldCount = RedisStore["visits"] || 0;
+    //let oldCount = req.session.count || 0;
+    try {
+        client.get("visits", (err, visits) => {
+            let oldCount = req.session.count || visits;
+            req.session.count = parseInt(oldCount) + 1;
+            res.send("Number of visits is: " + oldCount);
+            client.set("visits", parseInt(oldCount) + 1);
+            //console.log(req.session.count);
+        });
+    } catch (error) {
+        console.log(error);
+    }
+});
 app.get("/visits", async (req, res) => {
     console.log("hi");
-    const visits = await client.get("visits");
+    const visits = (await client.get("visits")) || 0;
     const newVisitCount = parseInt(visits) + 1;
     await client.set("visits", newVisitCount);
     res.send("Number of visits is: " + newVisitCount);
-});
-
-//defining the root endpoint
-app.get("/redis", (req, res) => {
-    console.log("redis");
-    let oldCount = RedisStore["visits"] || 0;
-    //let oldCount req.session.count || 0;
-    client.get("visits", (err, visits) => {
-        RedisStore["visits"] = parseInt(oldCount) + 1;
-        res.send("Number of visits is: " + oldCount);
-        client.set("visits", parseInt(oldCount) + 1);
-        //console.log(req.session.count);
-    });
-});
-
-//defining the root endpoint
-app.get("/withoutredis", (req, res) => {
-    client.get("visits", (err, visits) => {
-        res.send("Number of visits is: " + visits);
-        client.set("visits", parseInt(visits) + 1);
-    });
 });
 
 //specifying the listening port
