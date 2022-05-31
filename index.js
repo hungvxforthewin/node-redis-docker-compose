@@ -10,7 +10,7 @@ const app = express();
 // });
 const client = redis.createClient({
     url: "redis://redis:6379",
-    //legacyMode: true,
+    legacyMode: true,
 });
 
 client.on("error", (err) => console.log("Redis Client Error", err));
@@ -30,20 +30,36 @@ app.use(
     session({
         store: new RedisStore({ client: client }),
         secret: "config.SECRET",
-        resave: false,
+        //resave: false,
         //proxy: true,
-        saveUninitialized: false,
+        //saveUninitialized: false,
         cookie: { maxAge: 24 * 60 * 60 * 1000, httpOnly: false, secure: false }, // mini second hour * 60 * 60 * 1000
     })
 );
-
-//Set initial visits
-//client.set("visits", 0);
-
+app.use(function (req, res, next) {
+    if (!req.session) {
+        return next(new Error("oh no")); // handle error
+    }
+    next(); // otherwise continue
+});
+//Set initial visits, ERROR THIS HERE
+client.set("visits", 0);
+RedisStore["hits"] = 0;
 app.get("/", (req, res) => {
     res.send("working");
 });
 
+//set session data
+app.get("/set-session", async (req, res) => {
+    req.session.count = 0;
+    res.send("Number of visits from session is: " + req.session.count);
+});
+app.get("/get-visit", async (req, res) => {
+    const visits = req.session.count || 0;
+    const newVisitCount = parseInt(visits) + 1;
+    req.session.count = newVisitCount;
+    res.send("Number of visits is: " + newVisitCount);
+});
 //defining the root endpoint
 app.get("/redis", async (req, res) => {
     console.log("redis");
